@@ -1,7 +1,7 @@
 #include <string>
 #include "loam/scan_registration.h"
-#include "GLFW/glfw3.h"
 #include "glad/glad.h"
+#include "GLFW/glfw3.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -46,11 +46,6 @@ double prev_mouse_x = 0.0;
 double prev_mouse_y = 0.0;
 bool mouse_left_pushed = false;
 
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-
 void MainMenuWindow() {
    
   ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
@@ -76,15 +71,6 @@ int main(int argc, char **argv) {
   // Start with the the first (0) binary lidar file
   LoadLidarData(0);
 
-  // Camera3d_Init(&cam);
-  // Camera3d_SetWindowSize(&cam, 600, 600);
-  // Vec3f initial_camera_position = (Vec3f){.x = 0, .y = 50, .z = 0};
-  // Camera3d_SetCameraPosition(&cam, &initial_camera_position);
-  // win = GL_CreateWindow("Lidar Viewer", 600, 600);
-  // glfwSetKeyCallback(win, key_callback);
-  // glfwSetScrollCallback(win, scroll_callback);
-  // glfwSetMouseButtonCallback(win, mouse_button_callback);
-
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
@@ -107,7 +93,6 @@ int main(int argc, char **argv) {
     if (!ImGui::GetIO().WantCaptureMouse) {
       double x, y;
       glfwGetCursorPos(win, &x, &y);
-      mouse_callback(win, x, y);
     }
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -127,59 +112,4 @@ int main(int argc, char **argv) {
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
   return 0;
-}
-
-void mouse_callback(GLFWwindow* win, double xpos, double ypos) {
-
-  static const double angle_scale = 0.1;
-  if (mouse_left_pushed) {
-    double delta_x = (xpos - prev_mouse_x) * angle_scale;
-    double delta_y = (ypos - prev_mouse_y) * angle_scale;
-    prev_mouse_x = xpos;
-    prev_mouse_y = ypos;
-    /* As the mouse moves up down on the screen (which is a change of y position) we want to change
-     * the pitch angle. Thats a rotation around the X axis in OpenGL.
-     * Likewise, if the moves left/right (change of X position) we want to change the yaw angle. And thats
-     * a rotation around Y axis in OpenGL */
-    Camera3d_RotateIncrement(&cam, delta_y, -delta_x, 0.0);
-  }
-}
-
-void key_callback(GLFWwindow* win, int key, int scancode, int action, int mods) {
-  if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-
-  }
-  if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
-    cam.target.z += 5.0f;
-    Camera3d_SetTargetPosition(&cam, &cam.target);
-  }
-  if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-    cam.target.z -= 5.0f;
-    Camera3d_SetTargetPosition(&cam, &cam.target);
-  }
-  if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-    cam.target.x -= 5.0f;
-    Camera3d_SetTargetPosition(&cam, &cam.target);
-  }
-  if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-    cam.target.x += 5.0f;
-    Camera3d_SetTargetPosition(&cam, &cam.target);
-  }
-}
-
-void scroll_callback(GLFWwindow* win, double xoffset, double yoffset) {
-  Camera3d_ChangeFov(&cam, yoffset * 0.1);
-}
-
-void mouse_button_callback(GLFWwindow* win, int button, int action, int mods) {
-  if (button == GLFW_MOUSE_BUTTON_LEFT) {
-    if (action == GLFW_PRESS) {
-      /* Get the mouse position from when the left button is clicked */
-      glfwGetCursorPos(win, &prev_mouse_x, &prev_mouse_y);
-      mouse_left_pushed = true;
-    }
-    else {
-      mouse_left_pushed = false;
-    }
-  }
 }
