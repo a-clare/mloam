@@ -36,7 +36,7 @@
 #include <cmath>
 #include <vector>
 #include <string>
-#include "loam/scan_registration.h"
+#include "mloam/scan_registration.h"
 #include <pcl/filters/voxel_grid.h>
 
 // Velodyne HDL64 specific parameters 
