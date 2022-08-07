@@ -1,5 +1,5 @@
 #include <string>
-#include "mloam/scan_registration.h"
+#include "mloam/mloam.h"
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
@@ -23,6 +23,13 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 
 pcl::PointCloud<pcl::PointXYZI> point_cloud;
+
+// For scan registration
+pcl::PointCloud<pcl::PointXYZI> corner_points_sharp;
+pcl::PointCloud<pcl::PointXYZI> corner_points_less_sharp;
+pcl::PointCloud<pcl::PointXYZI> surface_points_flat;
+pcl::PointCloud<pcl::PointXYZI> surface_points_less_flat;
+pcl::PointCloud<pcl::PointXYZI> filtered_point_cloud;
 
 void LoadLidarData(int binaryFileNumber) {
   std::string path_to_lidar_data = "/Users/adamclare/data/2011_09_30/2011_09_30_drive_0028_sync/velodyne_points/data/";
@@ -94,7 +101,13 @@ int main(int argc, char **argv) {
   ImGui_ImplGlfw_InitForOpenGL(win, true);
   ImGui_ImplOpenGL3_Init("#version 150");
 
-  ScanRegistration_Run(point_cloud);
+  mloam::ScanRegistration(point_cloud, 
+                          corner_points_sharp, 
+                          corner_points_less_sharp, 
+                          surface_points_flat,
+                          surface_points_less_flat,
+                          filtered_point_cloud);
+  
   while (!glfwWindowShouldClose(win)) {
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);

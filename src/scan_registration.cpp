@@ -36,7 +36,7 @@
 #include <cmath>
 #include <vector>
 #include <string>
-#include "mloam/scan_registration.h"
+#include "mloam/mloam.h"
 #include <pcl/filters/voxel_grid.h>
 
 // Velodyne HDL64 specific parameters 
@@ -61,16 +61,12 @@ int cloud_label[MAX_NUMBER_OF_POINTS];
 // Before doing any point feature extraction we will remove any points less than this distance
 static const double MINIMUM_DISTANCE_THRESHOLD = 5.0;
 
+static std::vector<pcl::PointCloud<pcl::PointXYZI>> scan_rings(HDL_64_NUM_SCAN_RINGS);
+
 bool CompareCloudCurvatures(int i, int j) { 
   return (cloud_curvatures[i] < cloud_curvatures[j]); 
 }
 
-static pcl::PointCloud<pcl::PointXYZI> corner_points_sharp;
-static pcl::PointCloud<pcl::PointXYZI> corner_points_less_sharp;
-static pcl::PointCloud<pcl::PointXYZI> surface_points_flat;
-static pcl::PointCloud<pcl::PointXYZI> surface_points_less_flat;
-static pcl::PointCloud<pcl::PointXYZI> scan_point_cloud;
-static std::vector<pcl::PointCloud<pcl::PointXYZI>> scan_rings(HDL_64_NUM_SCAN_RINGS);
 /**
  * @brief Remove points below an input distance threshold, modifies input point cloud
  * 
@@ -105,9 +101,15 @@ void RemovePointsLessThanDistance(pcl::PointCloud<pcl::PointXYZI> &pointCloud,
   pointCloud.is_dense = true;
 }
 
-void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
-  scan_point_cloud = pointCloud;
-  std::cout << "Input point cloud of size " << scan_point_cloud.size() << std::endl;
+bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
+                             pcl::PointCloud<pcl::PointXYZI> &cornerPointsSharp,
+                             pcl::PointCloud<pcl::PointXYZI> &cornerPointsLessSharp,
+                             pcl::PointCloud<pcl::PointXYZI> &surfacePointsFlat,
+                             pcl::PointCloud<pcl::PointXYZI> &surfacePointsLessFlat,
+                             pcl::PointCloud<pcl::PointXYZI> &filteredCloud) {
+
+  filteredCloud = inputCloud;
+  LOG_INFO << "Number of points in input point cloud size: " << inputCloud.size(); 
 
   if (!is_system_initialized) {
     system_delay_count += 1;
@@ -115,33 +117,45 @@ void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
       is_system_initialized = true;
     }
     else {
-      return;
+      return false;
     }
   }
 
   scan_rings.clear();
-  corner_points_less_sharp.clear();
-  corner_points_sharp.clear();
-  surface_points_flat.clear();
-  surface_points_less_flat.clear();
+  cornerPointsLessSharp.clear();
+  cornerPointsSharp.clear();
+  surfacePointsFlat.clear();
+  surfacePointsLessFlat.clear();
 
   /* The main steps that are going to happen in scan registration is:
     1) Pre-filter points by distance
     2) Separate the point cloud into their respective scan rings
     3) Find point features in each scan ring
   */
+  
+  LOG_DEBUG << "Filtering points by distance";
+  RemovePointsLessThanDistance(filteredCloud, MINIMUM_DISTANCE_THRESHOLD);
+  LOG_INFO << "Number of points after distance filtering: " << filteredCloud.size();
 
   std::vector<int> scan_start_indices(HDL_64_NUM_SCAN_RINGS, 0);
   std::vector<int> scan_end_indices(HDL_64_NUM_SCAN_RINGS, 0);
 
-  RemovePointsLessThanDistance(scan_point_cloud, MINIMUM_DISTANCE_THRESHOLD);
+  int cloud_size = filteredCloud.points.size();
 
-  int cloud_size = scan_point_cloud.points.size();
-  float start_orientation = -atan2(scan_point_cloud.points[0].y, scan_point_cloud.points[0].x);
-  float end_orientation = -atan2(scan_point_cloud.points[cloud_size - 1].y,
-                                 scan_point_cloud.points[cloud_size - 1].x) +
+  /* We assume the lidar is spinning. If we look at a single scan line, the 2nd point in the scan occurs
+   * N seconds after the first point. We can estimate determine N by calculating the horizontal angle
+   * (orientation) of the point and using the lidar spin rate.
+   * So we need the start and end orientation of the point cloud to make all the times relative to
+   * this start and end
+   * TODO: This is only required if we need to undistort the point cloud, if its already
+   *       corrected we dont need to do this.
+   * TODO: Does this assume the lidar is reasonably level? What happens if the lidar is not level? */
+  float start_orientation = -atan2(filteredCloud.points[0].y, filteredCloud.points[0].x);
+  float end_orientation = -atan2(filteredCloud.points[cloud_size - 1].y,
+                                 filteredCloud.points[cloud_size - 1].x) +
                                  2 * M_PI;
 
+  // TODO: Understand what this is doing. I think its capping upper and lower angle values but need to confirm
   if (end_orientation - start_orientation > 3 * M_PI) {
     end_orientation -= 2 * M_PI;
   }
@@ -154,9 +168,9 @@ void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
   pcl::PointXYZI point;
 
   for (int i = 0; i < cloud_size; i++) {
-    point.x = pointCloud.points[i].x;
-    point.y = pointCloud.points[i].y;
-    point.z = pointCloud.points[i].z;
+    point.x = filteredCloud.points[i].x;
+    point.y = filteredCloud.points[i].y;
+    point.z = filteredCloud.points[i].z;
 
     float vertical_angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
     int scan_id = 0;
@@ -227,7 +241,7 @@ void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
     if (scan_end_indices[i] - scan_start_indices[i] < 6) {
       continue;
     }
-    pcl::PointCloud<pcl::PointXYZI>::Ptr surface_points_less_flat_scan(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr surfacePointsLessFlat_scan(new pcl::PointCloud<pcl::PointXYZI>);
     for (int j = 0; j < 6; j++) {
       int sp = scan_start_indices[i] + (scan_end_indices[i] - scan_start_indices[i]) * j / 6;
       int ep = scan_start_indices[i] + (scan_end_indices[i] - scan_start_indices[i]) * (j + 1) / 6 - 1;
@@ -243,12 +257,12 @@ void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
           largest_picked_number++;
           if (largest_picked_number <= 2) {
             cloud_label[ind] = 2;
-            corner_points_sharp.push_back(laser_cloud->points[ind]);
-            corner_points_less_sharp.push_back(laser_cloud->points[ind]);
+            cornerPointsSharp.push_back(laser_cloud->points[ind]);
+            cornerPointsLessSharp.push_back(laser_cloud->points[ind]);
           }
           else if (largest_picked_number <= 20) {
             cloud_label[ind] = 1;
-            corner_points_less_sharp.push_back(laser_cloud->points[ind]);
+            cornerPointsLessSharp.push_back(laser_cloud->points[ind]);
           }
           else {
             break;
@@ -286,7 +300,7 @@ void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
         if (cloud_neighbor_picked[ind] == 0 && cloud_curvatures[ind] < 0.1) {
 
           cloud_label[ind] = -1;
-          surface_points_flat.push_back(laser_cloud->points[ind]);
+          surfacePointsFlat.push_back(laser_cloud->points[ind]);
 
           smallestPickedNum++;
           if (smallestPickedNum >= 4) {
@@ -319,19 +333,20 @@ void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
 
       for (int k = sp; k <= ep; k++) {
         if (cloud_label[k] <= 0) {
-          surface_points_less_flat_scan->push_back(laser_cloud->points[k]);
+          surfacePointsLessFlat_scan->push_back(laser_cloud->points[k]);
         }
       }
     }
 
     pcl::PointCloud<pcl::PointXYZI> downsampled_surface_points;
     pcl::VoxelGrid<pcl::PointXYZI> down_size_voxel_filter;
-    down_size_voxel_filter.setInputCloud(surface_points_less_flat_scan);
+    down_size_voxel_filter.setInputCloud(surfacePointsLessFlat_scan);
     down_size_voxel_filter.setLeafSize(0.2, 0.2, 0.2);
     down_size_voxel_filter.filter(downsampled_surface_points);
 
-    surface_points_less_flat += downsampled_surface_points;
+    surfacePointsLessFlat += downsampled_surface_points;
   }
+  return true;
 }
 
 // void ScanRegistration_Draw(const Camera3d *cam) {
@@ -349,7 +364,7 @@ void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
 //     ImGui::InputInt("Point Size", &point_size, 1, 1);
 
 //     if (show) {
-//       LidarViewer_Draw(corner_points_sharp, cam, color, point_size);
+//       LidarViewer_Draw(cornerPointsSharp, cam, color, point_size);
 //     }
 //     ImGui::TreePop();
 //   }
@@ -363,7 +378,7 @@ void ScanRegistration_Run(const pcl::PointCloud<pcl::PointXYZI> &pointCloud) {
 //     ImGui::InputInt("Point Size", &point_size, 1, 1);
 
 //     if (show) {
-//       LidarViewer_Draw(corner_points_less_sharp, cam, color, point_size);
+//       LidarViewer_Draw(cornerPointsLessSharp, cam, color, point_size);
 //     }
 //     ImGui::TreePop();
 //   }
