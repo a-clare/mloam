@@ -40,8 +40,12 @@
 #include <pcl/filters/voxel_grid.h>
 
 // Velodyne HDL64 specific parameters 
-static const double HDL_64_SCAN_PERIOD = 0.1;
-static const int HDL_64_NUM_SCAN_RINGS = 64;
+static const double HDL64_SCAN_PERIOD = 0.1;
+static const int HDL64_NUM_SCAN_RINGS = 64;
+static const int HDL64_NUM_LASERS_PER_BLOCK = 32;
+static const float HDL64_UPPER_BLOCK_MIN_ANGLE = -8.33f;
+static const float HDL64_UPPER_BLOCK_MAX_ANGLE = 2.0f;
+static const float HDL64_MIN_ANGLE = -24.33;
 
 // How many point clouds to skip on startup, the delay
 const int SYSTEM_DELAY = 0;
@@ -61,7 +65,10 @@ int cloud_label[MAX_NUMBER_OF_POINTS];
 // Before doing any point feature extraction we will remove any points less than this distance
 static const double MINIMUM_DISTANCE_THRESHOLD = 5.0;
 
-static std::vector<pcl::PointCloud<pcl::PointXYZI>> scan_rings(HDL_64_NUM_SCAN_RINGS);
+// As part of the scan registration we will separate each point into its individual
+// scan rings (0 to 64 for HDl64). This is an intermediate step in the process so
+// we will re-use scan_rings every iteration 
+static std::vector<pcl::PointCloud<pcl::PointXYZI>> scan_rings(HDL64_NUM_SCAN_RINGS);
 
 bool CompareCloudCurvatures(int i, int j) { 
   return (cloud_curvatures[i] < cloud_curvatures[j]); 
@@ -107,6 +114,12 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
                              pcl::PointCloud<pcl::PointXYZI> &surfacePointsFlat,
                              pcl::PointCloud<pcl::PointXYZI> &surfacePointsLessFlat,
                              pcl::PointCloud<pcl::PointXYZI> &filteredCloud) {
+  
+  /* The main steps of the scan registration are:
+    1) Pre-filter points by distance
+    2) Separate the point cloud into their respective scan rings, 
+    3) Find point features in each scan ring by looking at the curvature of each point
+  */
 
   filteredCloud = inputCloud;
   LOG_INFO << "Number of points in input point cloud size: " << inputCloud.size(); 
@@ -121,27 +134,22 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
     }
   }
 
-  scan_rings.clear();
+  // Reset each ring since we re-use it every iteration
+  for (auto &ring : scan_rings) {
+    ring.clear();
+  }
+  // Reset our inputs in case caller re-uses the variables, dont want to add 
+  // new features to the previous iteration
   cornerPointsLessSharp.clear();
   cornerPointsSharp.clear();
   surfacePointsFlat.clear();
   surfacePointsLessFlat.clear();
 
-  /* The main steps that are going to happen in scan registration is:
-    1) Pre-filter points by distance
-    2) Separate the point cloud into their respective scan rings
-    3) Find point features in each scan ring
-  */
-  
   LOG_DEBUG << "Filtering points by distance";
   RemovePointsLessThanDistance(filteredCloud, MINIMUM_DISTANCE_THRESHOLD);
   LOG_INFO << "Number of points after distance filtering: " << filteredCloud.size();
 
-  std::vector<int> scan_start_indices(HDL_64_NUM_SCAN_RINGS, 0);
-  std::vector<int> scan_end_indices(HDL_64_NUM_SCAN_RINGS, 0);
-
   int cloud_size = filteredCloud.points.size();
-
   /* We assume the lidar is spinning. If we look at a single scan line, the 2nd point in the scan occurs
    * N seconds after the first point. We can estimate determine N by calculating the horizontal angle
    * (orientation) of the point and using the lidar spin rate.
@@ -164,27 +172,40 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
   }
 
   bool passed_halfway = false;
-  int count = cloud_size;
-  pcl::PointXYZI point;
-
-  for (int i = 0; i < cloud_size; i++) {
-    point.x = filteredCloud.points[i].x;
-    point.y = filteredCloud.points[i].y;
-    point.z = filteredCloud.points[i].z;
+  for (auto &point : filteredCloud) {
+    /* Note: At this point some loam implementations will take the point and 
+             rotate it, to change its coordinate system.
+             I think its only a matter of preference so im not rotating here 
+    */
 
     float vertical_angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
     int scan_id = 0;
 
-    if (vertical_angle >= -8.83) {
-      scan_id = int((2 - vertical_angle) * 3.0 + 0.5);
+    // Removing outliers by checking if the vertical angle is not within the expected range
+    // of the HDL64
+    if (vertical_angle > HDL64_UPPER_BLOCK_MAX_ANGLE || vertical_angle < HDL64_MIN_ANGLE) {
+      cloud_size--;
+      continue;
+    }
+    
+    /* The HDL64 separates the 64 lasers into an upper block and lower block, each block has 32 lasers.
+     * It has a total vertical resolution of +2 degrees to -24.8 degrees.
+     * However, each block has a different vertical angle separation.
+     * The upper block, from [-8.33 to +2] has a 1/3 degree separation
+     * The lower block, from [-24.33 to -8.33 has a 1/2 degree separation
+     * AKA its not uniform (each ring is not equally spaced), so in order to separate the point cloud 
+     * into scan rings we need to check if we are in the upper or lower block first
+     */
+    if (vertical_angle >= HDL64_UPPER_BLOCK_MIN_ANGLE) {
+      scan_id = int((HDL64_UPPER_BLOCK_MAX_ANGLE - vertical_angle) * 3.0 + 0.5);
     }
     else {
-      scan_id = HDL_64_NUM_SCAN_RINGS / 2 + int((-8.83 - vertical_angle) * 2.0 + 0.5);
+      scan_id = HDL64_NUM_LASERS_PER_BLOCK + int((HDL64_UPPER_BLOCK_MIN_ANGLE - vertical_angle) * 2.0 + 0.5);
     }
 
-    // use [0 50]  > 50 remove outlies
-    if (vertical_angle > 2 || vertical_angle < -24.33 || scan_id > 50 || scan_id < 0) {
-      count--;
+    // Capping the scan rings to only include rings [0 to 50] to help remove outliers
+    if (scan_id > 50 || scan_id < 0) {
+      cloud_size--;
       continue;
     }
     
@@ -211,16 +232,25 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
       }
     }
 
+    // TODO: This is quite hacky, using the intensity field to hold the point scan time information
     float relative_time = (orientation - start_orientation) / (end_orientation - start_orientation);
-    point.intensity = scan_id + HDL_64_SCAN_PERIOD * relative_time;
+    point.intensity = scan_id + HDL64_SCAN_PERIOD * relative_time;
     scan_rings[scan_id].push_back(point);
   }
 
-  cloud_size = count;
+  LOG_INFO << "Number of points after filtering points by vertical angle: " << cloud_size;
+
+  std::vector<int> scan_start_indices(HDL64_NUM_SCAN_RINGS, 0);
+  std::vector<int> scan_end_indices(HDL64_NUM_SCAN_RINGS, 0);
+
+  // TODO: Why use a pcl pointer type here?
   pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-  for (int i = 0; i < HDL_64_NUM_SCAN_RINGS; i++) {
+  for (int i = 0; i < HDL64_NUM_SCAN_RINGS; i++) {
     scan_start_indices[i] = laser_cloud->size() + 5;
     *laser_cloud += scan_rings[i];
+    // TOOD: I think this will cause issues if the first N rings contain 0 points. Will
+    //       be doing size() - 6, which is 0 - 7, and size() is an unsigned type and might
+    //       cause overflow. Investigate
     scan_end_indices[i] = laser_cloud->size() - 6;
   }
 
@@ -235,9 +265,7 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
     cloud_label[i] = 0;
   }
 
-
-  float t_q_sort = 0;
-  for (int i = 0; i < HDL_64_NUM_SCAN_RINGS; i++) {
+  for (int i = 0; i < HDL64_NUM_SCAN_RINGS; i++) {
     if (scan_end_indices[i] - scan_start_indices[i] < 6) {
       continue;
     }
@@ -348,40 +376,3 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
   }
   return true;
 }
-
-// void ScanRegistration_Draw(const Camera3d *cam) {
-//   if (!ImGui::Begin("Scan Registration")) {
-//     ImGui::End();
-//     return;
-//   }
-
-//   if (ImGui::TreeNode("Corner Points Sharp")) {
-//     static bool show = true;
-//     ImGui::Checkbox("Show", &show);
-//     static ImVec4 color = ImVec4(0.0, 1.0, 0.0, 1.0);
-//     ImGui::ColorPicker4("Point Color", &color.x);
-//     static int point_size = 5;
-//     ImGui::InputInt("Point Size", &point_size, 1, 1);
-
-//     if (show) {
-//       LidarViewer_Draw(cornerPointsSharp, cam, color, point_size);
-//     }
-//     ImGui::TreePop();
-//   }
-
-//   if (ImGui::TreeNode("Corner Points Less Sharp")) {
-//     static bool show = true;
-//     ImGui::Checkbox("Show", &show);
-//     static ImVec4 color = ImVec4(0.0, 0.0, 1.0, 1.0);
-//     ImGui::ColorPicker4("Point Color", &color.x);
-//     static int point_size = 5;
-//     ImGui::InputInt("Point Size", &point_size, 1, 1);
-
-//     if (show) {
-//       LidarViewer_Draw(cornerPointsLessSharp, cam, color, point_size);
-//     }
-//     ImGui::TreePop();
-//   }
-
-//   ImGui::End();
-// }

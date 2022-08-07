@@ -1,5 +1,6 @@
 #include <string>
 #include "mloam/mloam.h"
+#include "mloam/lidar_viewer.h"
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
@@ -75,7 +76,7 @@ void MainMenuWindow() {
   ImGui::InputInt("Point Size", &point_size, 1, 1);
 
   if (show_original_pt_cloud) {
-    // LidarViewer_Draw(point_cloud, &cam, lidar_pt_color, point_size);
+    mloam::LidarViewer_Draw(point_cloud, cam, lidar_pt_color, point_size);
   }
   ImGui::End();
 
@@ -92,6 +93,7 @@ int main(int argc, char **argv) {
   // Start with the the first (0) binary lidar file
   LoadLidarData(0);
 
+  mloam::LidarViewer_Setup();
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
@@ -107,7 +109,7 @@ int main(int argc, char **argv) {
                           surface_points_flat,
                           surface_points_less_flat,
                           filtered_point_cloud);
-  
+
   while (!glfwWindowShouldClose(win)) {
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);

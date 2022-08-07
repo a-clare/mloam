@@ -26,9 +26,10 @@ target_link_libraries(imgui glfw glad)
 target_include_directories(imgui PUBLIC ../imgui/backends)
 
 add_library(mloam
-        src/scan_registration.cpp)
-target_link_libraries(mloam ${PCL_LIBRARIES})
+        src/scan_registration.cpp
+        src/lidar_viewer.cpp)
+target_link_libraries(mloam ${PCL_LIBRARIES} visualizer)
 target_include_directories(mloam PUBLIC include)
 
 add_executable(my_loam main.cpp)
-target_link_libraries(my_loam mloam imgui visualizer)
+target_link_libraries(my_loam mloam imgui)

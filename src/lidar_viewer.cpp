@@ -84,15 +84,18 @@ static GLuint lidar_shader_prog = 0;
  * Setting the data below is:
  * RotX(90 degrees) * RotZ(90 degrees) in homogeneous (so its 4x4)
  */
-/* The model matrix for viewing the lidar data */
-static const Mat4f model = (Mat4f){
-    .mat = {0.0f, 0.0f, -1.0f, 0.0f,
+static Eigen::Matrix4f model;
+
+void mloam::LidarViewer_Setup() {
+  model <<  0.0f, 0.0f, -1.0f, 0.0f,
             -1.0f, 0.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f}};
-
-void LidarViewer_Setup() {
-
+            0.0f, 0.0f, 0.0f, 1.0f;
+  // Above we set the matrix values in row major ordering however OpenGL assumes
+  // column major ordering so need to transpose. 
+  // Could set the values above to the transpose, but wanted to be explict why
+  // I am doing things
+  model.transposeInPlace();
   unsigned int vs, fs;
   vs = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vs, 1, &lidar_vs_src, NULL);
@@ -131,13 +134,17 @@ void LidarViewer_Setup() {
   glDeleteShader(fs);
 }
 
-void LidarViewer_Draw(const pcl::PointCloud<pcl::PointXYZI> &scan,
-                      const Camera3d *cam,
-                      const ImVec4 color,
-                      int pointSize) {
+void mloam::LidarViewer_Draw(const pcl::PointCloud<pcl::PointXYZI> &scan,
+                             const Camera3d &cam,
+                             const ImVec4 color,
+                             int pointSize) {
   if (scan.size() == 0) {
     return;
   }
+  // Could not get OpenGL drawing pcl objects, didnt try to hard, so the hacky
+  // way around it is to copy the points into a contigous array/vector.
+  // For some reason sizeof(pcl::PointXYZI) is not 16 bytes (4 bytes x 4 floats) and
+  // I think that is whats causing the issue.
   struct pt {
     float x;
     float y;
@@ -159,18 +166,18 @@ void LidarViewer_Draw(const pcl::PointCloud<pcl::PointXYZI> &scan,
   glGenBuffers(1, &vbo);
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, pts.size() * sizeof(pcl::PointXYZI), &pts[0], GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, pts.size() * sizeof(pt), &pts[0], GL_DYNAMIC_DRAW);
   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
   glBindVertexArray(0);
 
   glUseProgram(lidar_shader_prog);
   GLint model_loc = glGetUniformLocation(lidar_shader_prog, "model");
-  glUniformMatrix4fv(model_loc, 1, GL_FALSE, &model.mat[0]);
+  glUniformMatrix4fv(model_loc, 1, GL_FALSE, &model(0));
   GLint view_loc = glGetUniformLocation(lidar_shader_prog, "view");
-  glUniformMatrix4fv(view_loc, 1, GL_FALSE, &cam->view.mat[0]);
+  glUniformMatrix4fv(view_loc, 1, GL_FALSE, &cam.view(0));
   GLint projection_loc = glGetUniformLocation(lidar_shader_prog, "projection");
-  glUniformMatrix4fv(projection_loc, 1, GL_FALSE, &cam->projection.mat[0]);
+  glUniformMatrix4fv(projection_loc, 1, GL_FALSE, &cam.projection(0));
 
   GLint color_loc = glGetUniformLocation(lidar_shader_prog, "color");
   glUniform4f(color_loc, color.x, color.y, color.z, color.w);

@@ -45,6 +45,8 @@ namespace mloam {
  * Extracting features will do some filtering of points to try and remove outliers, the
  * filtered pointcloud that is used is returned as filteredCloud 
  * 
+ * This only works on HDL64 lidars!!!
+ * 
  * @param pointCloud unmodified original point cloud that will be used to find features
  * @param cornerPointsSharp 
  * @param cornerPointsLessSharp 
