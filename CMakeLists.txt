@@ -10,8 +10,7 @@ include_directories(include
         ${PCL_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR})
 
-add_subdirectory(../glad ${CMAKE_CURRENT_BINARY_DIR}/glad)
-add_subdirectory(../glfw ${CMAKE_CURRENT_BINARY_DIR}/glfw)
+add_subdirectory(../visualizer ${CMAKE_CURRENT_BINARY_DIR}/visualizer)
 
 include_directories(../imgui/)
 include_directories(../imgui/backends)
@@ -28,8 +27,8 @@ target_include_directories(imgui PUBLIC ../imgui/backends)
 
 add_library(mloam
         src/scan_registration.cpp)
-target_link_libraries(mloam ${PCL_LIBRARIES} imgui)
+target_link_libraries(mloam ${PCL_LIBRARIES})
 target_include_directories(mloam PUBLIC include)
 
 add_executable(my_loam main.cpp)
-target_link_libraries(my_loam mloam)
+target_link_libraries(my_loam mloam imgui visualizer)
