@@ -265,6 +265,7 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
     cloud_label[i] = 0;
   }
 
+  LOG_INFO << "Starting to extract features";
   for (int i = 0; i < HDL64_NUM_SCAN_RINGS; i++) {
     if (scan_end_indices[i] - scan_start_indices[i] < 6) {
       continue;

@@ -1,7 +1,6 @@
 
 #include "mloam/lidar_viewer.h"
-#include "visualizer/gl.h"
-#include "visualizer/camera3d.h"
+#include "mgl/mgl.h"
 #include "imgui.h"
 #include <iostream>
 #include <pcl/point_cloud.h>
@@ -135,7 +134,7 @@ void mloam::LidarViewer_Setup() {
 }
 
 void mloam::LidarViewer_Draw(const pcl::PointCloud<pcl::PointXYZI> &scan,
-                             const Camera3d &cam,
+                             const mgl::Camera3D &cam,
                              const ImVec4 color,
                              int pointSize) {
   if (scan.size() == 0) {
@@ -175,9 +174,9 @@ void mloam::LidarViewer_Draw(const pcl::PointCloud<pcl::PointXYZI> &scan,
   GLint model_loc = glGetUniformLocation(lidar_shader_prog, "model");
   glUniformMatrix4fv(model_loc, 1, GL_FALSE, &model(0));
   GLint view_loc = glGetUniformLocation(lidar_shader_prog, "view");
-  glUniformMatrix4fv(view_loc, 1, GL_FALSE, &cam.view(0));
+  glUniformMatrix4fv(view_loc, 1, GL_FALSE, &cam.GetViewMatrix()(0));
   GLint projection_loc = glGetUniformLocation(lidar_shader_prog, "projection");
-  glUniformMatrix4fv(projection_loc, 1, GL_FALSE, &cam.projection(0));
+  glUniformMatrix4fv(projection_loc, 1, GL_FALSE, &mgl::GetProjectionMatrix()(0));
 
   GLint color_loc = glGetUniformLocation(lidar_shader_prog, "color");
   glUniform4f(color_loc, color.x, color.y, color.z, color.w);
