@@ -62,6 +62,8 @@ bool ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
                       pcl::PointCloud<pcl::PointXYZI> &surfacePointsLessFlat,
                       pcl::PointCloud<pcl::PointXYZI> &filteredCloud);
 
+bool Odometry();
+
 } // end of namespace mloam
 
 #endif
