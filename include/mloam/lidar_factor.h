@@ -11,15 +11,21 @@
 #include <pcl/point_types.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
-struct LidarEdgeFactor
-{
-	LidarEdgeFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d last_point_a_,
-					Eigen::Vector3d last_point_b_, double s_)
-		: curr_point(curr_point_), last_point_a(last_point_a_), last_point_b(last_point_b_), s(s_) {}
+struct LidarEdgeFactor {
+ 
+	LidarEdgeFactor(Eigen::Vector3d curr_point_, 
+                  Eigen::Vector3d last_point_a_,
+					        Eigen::Vector3d last_point_b_, 
+                  double s_) : 
+                  curr_point(curr_point_), 
+                  last_point_a(last_point_a_), 
+                  last_point_b(last_point_b_), 
+                  s(s_) {
+    
+  }
 
 	template <typename T>
-	bool operator()(const T *q, const T *t, T *residual) const
-	{
+	bool operator()(const T *q, const T *t, T *residual) const {
 
 		Eigen::Matrix<T, 3, 1> cp{T(curr_point.x()), T(curr_point.y()), T(curr_point.z())};
 		Eigen::Matrix<T, 3, 1> lpa{T(last_point_a.x()), T(last_point_a.y()), T(last_point_a.z())};
@@ -44,9 +50,10 @@ struct LidarEdgeFactor
 		return true;
 	}
 
-	static ceres::CostFunction *Create(const Eigen::Vector3d curr_point_, const Eigen::Vector3d last_point_a_,
-									   const Eigen::Vector3d last_point_b_, const double s_)
-	{
+	static ceres::CostFunction *Create(const Eigen::Vector3d curr_point_, 
+                                     const Eigen::Vector3d last_point_a_,
+									                   const Eigen::Vector3d last_point_b_, 
+                                     const double s_) {
 		return (new ceres::AutoDiffCostFunction<
 				LidarEdgeFactor, 3, 4, 3>(
 			new LidarEdgeFactor(curr_point_, last_point_a_, last_point_b_, s_)));
@@ -56,20 +63,24 @@ struct LidarEdgeFactor
 	double s;
 };
 
-struct LidarPlaneFactor
-{
-	LidarPlaneFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d last_point_j_,
-					 Eigen::Vector3d last_point_l_, Eigen::Vector3d last_point_m_, double s_)
-		: curr_point(curr_point_), last_point_j(last_point_j_), last_point_l(last_point_l_),
-		  last_point_m(last_point_m_), s(s_)
+struct LidarPlaneFactor {
+	LidarPlaneFactor(Eigen::Vector3d curr_point_, 
+                   Eigen::Vector3d last_point_j_,
+					         Eigen::Vector3d last_point_l_, 
+                   Eigen::Vector3d last_point_m_, 
+                   double s_) : 
+                   curr_point(curr_point_), 
+                   last_point_j(last_point_j_), 
+                   last_point_l(last_point_l_),
+		               last_point_m(last_point_m_), 
+                   s(s_)
 	{
 		ljm_norm = (last_point_j - last_point_l).cross(last_point_j - last_point_m);
 		ljm_norm.normalize();
 	}
 
 	template <typename T>
-	bool operator()(const T *q, const T *t, T *residual) const
-	{
+	bool operator()(const T *q, const T *t, T *residual) const {
 
 		Eigen::Matrix<T, 3, 1> cp{T(curr_point.x()), T(curr_point.y()), T(curr_point.z())};
 		Eigen::Matrix<T, 3, 1> lpj{T(last_point_j.x()), T(last_point_j.y()), T(last_point_j.z())};
@@ -91,9 +102,11 @@ struct LidarPlaneFactor
 		return true;
 	}
 
-	static ceres::CostFunction *Create(const Eigen::Vector3d curr_point_, const Eigen::Vector3d last_point_j_,
-									   const Eigen::Vector3d last_point_l_, const Eigen::Vector3d last_point_m_,
-									   const double s_)
+	static ceres::CostFunction *Create(const Eigen::Vector3d curr_point_, 
+                                     const Eigen::Vector3d last_point_j_,
+									                   const Eigen::Vector3d last_point_l_, 
+                                     const Eigen::Vector3d last_point_m_,
+                                     const double s_)
 	{
 		return (new ceres::AutoDiffCostFunction<
 				LidarPlaneFactor, 1, 4, 3>(
@@ -108,9 +121,13 @@ struct LidarPlaneFactor
 struct LidarPlaneNormFactor
 {
 
-	LidarPlaneNormFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d plane_unit_norm_,
-						 double negative_OA_dot_norm_) : curr_point(curr_point_), plane_unit_norm(plane_unit_norm_),
-														 negative_OA_dot_norm(negative_OA_dot_norm_) {}
+	LidarPlaneNormFactor(Eigen::Vector3d curr_point_, 
+                       Eigen::Vector3d plane_unit_norm_, double negative_OA_dot_norm_) : 
+                       curr_point(curr_point_), 
+                       plane_unit_norm(plane_unit_norm_), 
+                       negative_OA_dot_norm(negative_OA_dot_norm_) {
+  
+  }
 
 	template <typename T>
 	bool operator()(const T *q, const T *t, T *residual) const
