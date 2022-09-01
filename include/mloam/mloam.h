@@ -62,7 +62,11 @@ bool ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
                       pcl::PointCloud<pcl::PointXYZI> &surfacePointsLessFlat,
                       pcl::PointCloud<pcl::PointXYZI> &filteredCloud);
 
-bool Odometry();
+bool Odometry(const pcl::PointCloud<pcl::PointXYZI> &cornerPointsSharp2,
+              const pcl::PointCloud<pcl::PointXYZI> &cornerPointsLessSharp2,
+              const pcl::PointCloud<pcl::PointXYZI> &surfPointsFlat2,
+              const pcl::PointCloud<pcl::PointXYZI> &surfPointsLessFlat2,
+              const pcl::PointCloud<pcl::PointXYZI> &laserCloudFullRes2);
 
 } // end of namespace mloam
 

@@ -52,7 +52,9 @@ bool LoadLidarData(int binaryFileNumber) {
 }
 
 int main(int argc, char **argv) {
-  
+   
+  // Setting log level to error so it supresses all the logging info in ScanRegistration, for now as I test odometry 
+  Log::LoggingLevel() = logging::LogLevel::Error;
   int binary_file_number = 0;
   while(LoadLidarData(binary_file_number)) {
     mloam::ScanRegistration(point_cloud, 
@@ -62,6 +64,11 @@ int main(int argc, char **argv) {
                             surface_points_less_flat,
                             filtered_point_cloud);
 
+    mloam::Odometry(corner_points_sharp,
+                    corner_points_less_sharp,
+                    surface_points_flat,
+                    surface_points_less_flat,
+                    filtered_point_cloud);
     binary_file_number += 1;
   }
 
