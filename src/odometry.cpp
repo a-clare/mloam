@@ -375,7 +375,7 @@ bool mloam::Odometry(const pcl::PointCloud<pcl::PointXYZI> &cornerPointsSharp2,
     q_w_curr = q_w_curr * q_last_curr;
   }
    
-  std::cout << t_w_curr.x() << "," << t_w_curr.y() << t_w_curr.z() << std::endl;
+  std::cout << t_w_curr.x() << "," << t_w_curr.y() << "," << t_w_curr.z() << std::endl;
   // publish odometry
   // nav_msgs::Odometry laserOdometry;
   // laserOdometry.header.frame_id = "/camera_init";
