@@ -33,8 +33,36 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include "mloam/logger.h"
+#include "Eigen/Core"
+#include "Eigen/Geometry"
 
 namespace mloam {
+
+struct Pose {
+  Eigen::Vector3d position;
+  Eigen::Quaterniond orientation;
+};
+
+struct PoseWithCovariance {
+  Pose pose;
+  Eigen::MatrixXd covariance = Eigen::MatrixXd(6, 6);
+};
+
+struct Twist {
+  Eigen::Vector3d linear;
+  Eigen::Vector3d angular;
+};
+
+struct TwistWithCovariance {
+  Twist twist;
+  Eigen::MatrixXd covariance = Eigen::MatrixXd(6, 6);
+};
+
+struct OdometryData {
+  PoseWithCovariance pose;
+  TwistWithCovariance twist;
+};
+
 
 /**
  * @brief Extract features from the input point cloud
@@ -68,6 +96,10 @@ bool Odometry(const pcl::PointCloud<pcl::PointXYZI> &cornerPointsSharp2,
               const pcl::PointCloud<pcl::PointXYZI> &surfPointsLessFlat2,
               const pcl::PointCloud<pcl::PointXYZI> &laserCloudFullRes2);
 
+void Mapping(const pcl::PointCloud<pcl::PointXYZI>& lastCloudCornerlast,
+					   const pcl::PointCloud<pcl::PointXYZI>& laserCloudSurfaceLast,
+						 const mloam::OdometryData& laserOdomToinit,
+						 pcl::PointCloud<pcl::PointXYZI>& laserCloudFullRes);
 } // end of namespace mloam
 
 #endif
