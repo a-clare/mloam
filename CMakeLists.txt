@@ -14,7 +14,8 @@ include_directories(include
 
 add_library(mloam
         src/scan_registration.cpp
-        src/odometry.cpp)
+        src/odometry.cpp
+        src/mapping.cpp)
 target_link_libraries(mloam ${PCL_LIBRARIES} ${CERES_LIBRARIES})
 target_include_directories(mloam PUBLIC include)
 
