@@ -76,8 +76,8 @@ int main(int argc, char **argv) {
 
     mloam::Mapping(corner_points_less_sharp,
                    surface_points_less_flat,
-                   odometry_data,
-                   filtered_point_cloud);
+                   filtered_point_cloud,
+                   odometry_data);
 
     binary_file_number += 1;
   }

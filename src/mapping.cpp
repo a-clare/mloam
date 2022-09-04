@@ -77,6 +77,7 @@ int laserCloudSurroundInd[125];
 // input: from odom
 pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerLast(new pcl::PointCloud<pcl::PointXYZI>());
 pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfLast(new pcl::PointCloud<pcl::PointXYZI>());
+pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudFullRes(new pcl::PointCloud<pcl::PointXYZI>());
 
 // ouput: all visualble cube points
 pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurround(new pcl::PointCloud<pcl::PointXYZI>());
@@ -86,7 +87,6 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerFromMap(new pcl::PointCloud
 pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfFromMap(new pcl::PointCloud<pcl::PointXYZI>());
 
 //input & output: points in one frame. local --> global
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudFullRes(new pcl::PointCloud<pcl::PointXYZI>());
 
 // points in every cube
 pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerArray[laserCloudNum];
@@ -189,8 +189,8 @@ void laserOdometryHandler(const mloam::OdometryData &laserOdometry) {
 
 void mloam::Mapping(const pcl::PointCloud<pcl::PointXYZI>& lastCloudCornerLast,
 									  const pcl::PointCloud<pcl::PointXYZI>& laserCloudSurfaceLast,
-										const mloam::OdometryData& laserOdomToInit,
-										pcl::PointCloud<pcl::PointXYZI>& laserCloudFullResolution) {
+									  const pcl::PointCloud<pcl::PointXYZI>& laserCloudFullResolution,
+			              const mloam::OdometryData& laserOdomToInit) {
 	
 	static const float lineRes = 0.4;
 	static const float planeRes = 0.8;
