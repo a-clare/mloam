@@ -94,12 +94,13 @@ bool Odometry(const pcl::PointCloud<pcl::PointXYZI> &cornerPointsSharp2,
               const pcl::PointCloud<pcl::PointXYZI> &cornerPointsLessSharp2,
               const pcl::PointCloud<pcl::PointXYZI> &surfPointsFlat2,
               const pcl::PointCloud<pcl::PointXYZI> &surfPointsLessFlat2,
-              const pcl::PointCloud<pcl::PointXYZI> &laserCloudFullRes2);
+              const pcl::PointCloud<pcl::PointXYZI> &laserCloudFullRes2,
+              OdometryData& odometryData);
 
 void Mapping(const pcl::PointCloud<pcl::PointXYZI>& lastCloudCornerlast,
-					   const pcl::PointCloud<pcl::PointXYZI>& laserCloudSurfaceLast,
-						 const mloam::OdometryData& laserOdomToinit,
-						 pcl::PointCloud<pcl::PointXYZI>& laserCloudFullRes);
+             const pcl::PointCloud<pcl::PointXYZI>& laserCloudSurfaceLast,
+             const mloam::OdometryData& laserOdomToinit,
+             pcl::PointCloud<pcl::PointXYZI>& laserCloudFullRes);
 } // end of namespace mloam
 
 #endif

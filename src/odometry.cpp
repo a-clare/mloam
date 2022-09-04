@@ -134,7 +134,8 @@ bool mloam::Odometry(const pcl::PointCloud<pcl::PointXYZI> &cornerPointsSharp2,
                      const pcl::PointCloud<pcl::PointXYZI> &cornerPointsLessSharp2,
                      const pcl::PointCloud<pcl::PointXYZI> &surfPointsFlat2,
                      const pcl::PointCloud<pcl::PointXYZI> &surfPointsLessFlat2,
-                     const pcl::PointCloud<pcl::PointXYZI> &laserCloudFullRes2) {
+                     const pcl::PointCloud<pcl::PointXYZI> &laserCloudFullRes2,
+                     OdometryData& odometryData) {
   
 
   cornerPointsSharp = cornerPointsSharp2;
@@ -375,28 +376,8 @@ bool mloam::Odometry(const pcl::PointCloud<pcl::PointXYZI> &cornerPointsSharp2,
     q_w_curr = q_w_curr * q_last_curr;
   }
    
-  std::cout << t_w_curr.x() << "," << t_w_curr.y() << "," << t_w_curr.z() << std::endl;
-  // publish odometry
-  // nav_msgs::Odometry laserOdometry;
-  // laserOdometry.header.frame_id = "/camera_init";
-  // laserOdometry.child_frame_id = "/laser_odom";
-  // laserOdometry.header.stamp = ros::Time().fromSec(timeSurfPointsLessFlat);
-  // laserOdometry.pose.pose.orientation.x = q_w_curr.x();
-  // laserOdometry.pose.pose.orientation.y = q_w_curr.y();
-  // laserOdometry.pose.pose.orientation.z = q_w_curr.z();
-  // laserOdometry.pose.pose.orientation.w = q_w_curr.w();
-  // laserOdometry.pose.pose.position.x = t_w_curr.x();
-  // laserOdometry.pose.pose.position.y = t_w_curr.y();
-  // laserOdometry.pose.pose.position.z = t_w_curr.z();
-  // pubLaserOdometry.publish(laserOdometry);
-
-  // geometry_msgs::PoseStamped laserPose;
-  // laserPose.header = laserOdometry.header;
-  // laserPose.pose = laserOdometry.pose.pose;
-  // laserPath.header.stamp = laserOdometry.header.stamp;
-  // laserPath.poses.push_back(laserPose);
-  // laserPath.header.frame_id = "/camera_init";
-  // pubLaserPath.publish(laserPath);
+  odometryData.pose.pose.orientation = q_w_curr;
+  odometryData.pose.pose.position = t_w_curr;
 
   // transform corner features and plane features to the scan end point
   if (0)

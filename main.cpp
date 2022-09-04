@@ -10,6 +10,8 @@ pcl::PointCloud<pcl::PointXYZI> surface_points_flat;
 pcl::PointCloud<pcl::PointXYZI> surface_points_less_flat;
 pcl::PointCloud<pcl::PointXYZI> filtered_point_cloud;
 
+pcl::PointCloud<pcl::PointXYZI> laser_map;
+
 bool LoadLidarData(int binaryFileNumber) {
   point_cloud.clear();
   corner_points_sharp.clear();
@@ -64,11 +66,19 @@ int main(int argc, char **argv) {
                             surface_points_less_flat,
                             filtered_point_cloud);
 
+    mloam::OdometryData odometry_data;
     mloam::Odometry(corner_points_sharp,
                     corner_points_less_sharp,
                     surface_points_flat,
                     surface_points_less_flat,
-                    filtered_point_cloud);
+                    filtered_point_cloud,
+                    odometry_data);
+
+    mloam::Mapping(corner_points_less_sharp,
+                   surface_points_less_flat,
+                   odometry_data,
+                   filtered_point_cloud);
+
     binary_file_number += 1;
   }
 
