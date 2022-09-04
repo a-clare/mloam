@@ -52,77 +52,71 @@
 #include "mloam/lidar_factor.h"
 
 
-int frameCount = 0;
+static int frameCount = 0;
 
-double timeLaserCloudCornerLast = 0;
-double timeLaserCloudSurfLast = 0;
-double timeLaserCloudFullRes = 0;
-double timeLaserOdometry = 0;
-
-
-int laserCloudCenWidth = 10;
-int laserCloudCenHeight = 10;
-int laserCloudCenDepth = 5;
-const int laserCloudWidth = 21;
-const int laserCloudHeight = 21;
-const int laserCloudDepth = 11;
+static double timeLaserCloudCornerLast = 0;
+static double timeLaserCloudSurfLast = 0;
+static double timeLaserCloudFullRes = 0;
+static double timeLaserOdometry = 0;
 
 
-const int laserCloudNum = laserCloudWidth * laserCloudHeight * laserCloudDepth; //4851
+static int laserCloudCenWidth = 10;
+static int laserCloudCenHeight = 10;
+static int laserCloudCenDepth = 5;
+static const int laserCloudWidth = 21;
+static const int laserCloudHeight = 21;
+static const int laserCloudDepth = 11;
 
 
-int laserCloudValidInd[125];
-int laserCloudSurroundInd[125];
+static const int laserCloudNum = laserCloudWidth * laserCloudHeight * laserCloudDepth; //4851
+
+
+static int laserCloudValidInd[125];
+static int laserCloudSurroundInd[125];
 
 // input: from odom
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerLast(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfLast(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudFullRes(new pcl::PointCloud<pcl::PointXYZI>());
+static pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerLast(new pcl::PointCloud<pcl::PointXYZI>());
+static pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfLast(new pcl::PointCloud<pcl::PointXYZI>());
+static pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudFullRes(new pcl::PointCloud<pcl::PointXYZI>());
 
 // ouput: all visualble cube points
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurround(new pcl::PointCloud<pcl::PointXYZI>());
+static pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurround(new pcl::PointCloud<pcl::PointXYZI>());
 
 // surround points in map to build tree
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerFromMap(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfFromMap(new pcl::PointCloud<pcl::PointXYZI>());
+static pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerFromMap(new pcl::PointCloud<pcl::PointXYZI>());
+static pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfFromMap(new pcl::PointCloud<pcl::PointXYZI>());
 
 //input & output: points in one frame. local --> global
 
 // points in every cube
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerArray[laserCloudNum];
-pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfArray[laserCloudNum];
+static pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerArray[laserCloudNum];
+static pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfArray[laserCloudNum];
 
 //kd-tree
-pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeCornerFromMap(new pcl::KdTreeFLANN<pcl::PointXYZI>());
-pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeSurfFromMap(new pcl::KdTreeFLANN<pcl::PointXYZI>());
+static pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeCornerFromMap(new pcl::KdTreeFLANN<pcl::PointXYZI>());
+static pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeSurfFromMap(new pcl::KdTreeFLANN<pcl::PointXYZI>());
 
-double parameters[7] = {0, 0, 0, 1, 0, 0, 0};
-Eigen::Map<Eigen::Quaterniond> q_w_curr(parameters);
-Eigen::Map<Eigen::Vector3d> t_w_curr(parameters + 4);
+static double parameters[7] = {0, 0, 0, 1, 0, 0, 0};
+static Eigen::Map<Eigen::Quaterniond> q_w_curr(parameters);
+static Eigen::Map<Eigen::Vector3d> t_w_curr(parameters + 4);
 
 // wmap_T_odom * odom_T_curr = wmap_T_curr;
 // transformation between odom's world and map's world frame
-Eigen::Quaterniond q_wmap_wodom(1, 0, 0, 0);
-Eigen::Vector3d t_wmap_wodom(0, 0, 0);
+static Eigen::Quaterniond q_wmap_wodom(1, 0, 0, 0);
+static Eigen::Vector3d t_wmap_wodom(0, 0, 0);
 
-Eigen::Quaterniond q_wodom_curr(1, 0, 0, 0);
-Eigen::Vector3d t_wodom_curr(0, 0, 0);
+static Eigen::Quaterniond q_wodom_curr(1, 0, 0, 0);
+static Eigen::Vector3d t_wodom_curr(0, 0, 0);
 
-mloam::OdometryData odomAftMapped;
+static mloam::OdometryData odomAftMapped;
 
-std::queue<pcl::PointCloud<pcl::PointXYZI>> cornerLastBuf;
-std::queue<pcl::PointCloud<pcl::PointXYZI>> surfLastBuf;
-std::queue<pcl::PointCloud<pcl::PointXYZI>> fullResBuf;
-std::queue<mloam::OdometryData> odometryBuf;
-std::mutex mBuf;
+static pcl::VoxelGrid<pcl::PointXYZI> downSizeFilterCorner;
+static pcl::VoxelGrid<pcl::PointXYZI> downSizeFilterSurf;
 
-pcl::VoxelGrid<pcl::PointXYZI> downSizeFilterCorner;
-pcl::VoxelGrid<pcl::PointXYZI> downSizeFilterSurf;
+static std::vector<int> pointSearchInd;
+static std::vector<float> pointSearchSqDis;
 
-std::vector<int> pointSearchInd;
-std::vector<float> pointSearchSqDis;
-
-pcl::PointXYZI pointOri, pointSel;
+static pcl::PointXYZI pointOri, pointSel;
 
 // set initial guess
 void transformAssociateToMap()

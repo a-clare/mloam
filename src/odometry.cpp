@@ -63,33 +63,34 @@ double timeSurfPointsFlat = 0;
 double timeSurfPointsLessFlat = 0;
 double timeLaserCloudFullRes = 0;
 
-pcl::KdTreeFLANN<pcl::PointXYZI> kdtreeCornerLast;
+static pcl::KdTreeFLANN<pcl::PointXYZI> kdtreeCornerLast;
 pcl::KdTreeFLANN<pcl::PointXYZI> kdtreeSurfLast;
 
-pcl::PointCloud<pcl::PointXYZI> cornerPointsSharp;
-pcl::PointCloud<pcl::PointXYZI> cornerPointsLessSharp;
-pcl::PointCloud<pcl::PointXYZI> surfPointsFlat;
-pcl::PointCloud<pcl::PointXYZI> surfPointsLessFlat;
+static pcl::PointCloud<pcl::PointXYZI> cornerPointsSharp;
+static pcl::PointCloud<pcl::PointXYZI> cornerPointsLessSharp;
+static pcl::PointCloud<pcl::PointXYZI> surfPointsFlat;
+static pcl::PointCloud<pcl::PointXYZI> surfPointsLessFlat;
 
-pcl::PointCloud<pcl::PointXYZI> laserCloudCornerLast;
-pcl::PointCloud<pcl::PointXYZI> laserCloudSurfLast;
-pcl::PointCloud<pcl::PointXYZI> laserCloudFullRes;
+static pcl::PointCloud<pcl::PointXYZI> laserCloudCornerLast;
+static pcl::PointCloud<pcl::PointXYZI> laserCloudSurfLast;
+static pcl::PointCloud<pcl::PointXYZI> laserCloudFullRes;
 
-int laserCloudCornerLastNum = 0;
-int laserCloudSurfLastNum = 0;
+static int laserCloudCornerLastNum = 0;
+static int laserCloudSurfLastNum = 0;
 
 // Transformation from current frame to world frame
-Eigen::Quaterniond q_w_curr(1, 0, 0, 0);
-Eigen::Vector3d t_w_curr(0, 0, 0);
+static Eigen::Quaterniond q_w_curr(1, 0, 0, 0);
+static Eigen::Vector3d t_w_curr(0, 0, 0);
 
 // q_curr_last(x, y, z, w), t_curr_last
-double para_q[4] = {0, 0, 0, 1};
-double para_t[3] = {0, 0, 0};
+static double para_q[4] = {0, 0, 0, 1};
+static double para_t[3] = {0, 0, 0};
 
-Eigen::Map<Eigen::Quaterniond> q_last_curr(para_q);
-Eigen::Map<Eigen::Vector3d> t_last_curr(para_t);
+static Eigen::Map<Eigen::Quaterniond> q_last_curr(para_q);
+static Eigen::Map<Eigen::Vector3d> t_last_curr(para_t);
 
-int frameCount = 0;
+static int frameCount = 0;
+
 // undistort lidar point
 void TransformToStart(const pcl::PointXYZI& pi, 
                       pcl::PointXYZI& po) {
