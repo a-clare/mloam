@@ -179,6 +179,10 @@ void laserOdometryHandler(const mloam::OdometryData &laserOdometry) {
 	odomAftMapped.pose.pose.position.x() = t_w_curr.x();
 	odomAftMapped.pose.pose.position.y() = t_w_curr.y();
 	odomAftMapped.pose.pose.position.z() = t_w_curr.z();
+
+	std::cout << "AFT: " << odomAftMapped.pose.pose.position.x() << ","
+		<< odomAftMapped.pose.pose.position.y() << ","
+		<< odomAftMapped.pose.pose.position.z() << std::endl;
 }
 
 void mloam::Mapping(const pcl::PointCloud<pcl::PointXYZI>& lastCloudCornerLast,
@@ -459,7 +463,7 @@ void mloam::Mapping(const pcl::PointCloud<pcl::PointXYZI>& lastCloudCornerLast,
 		downSizeFilterSurf.filter(*laserCloudSurfStack);
 		int laserCloudSurfStackNum = laserCloudSurfStack->points.size();
 
-		printf("map corner num %d  surf num %d \n", laserCloudCornerFromMapNum, laserCloudSurfFromMapNum);
+		// printf("map corner num %d  surf num %d \n", laserCloudCornerFromMapNum, laserCloudSurfFromMapNum);
 		if (laserCloudCornerFromMapNum > 10 && laserCloudSurfFromMapNum > 50)
 		{
 			kdtreeCornerFromMap->setInputCloud(laserCloudCornerFromMap);
