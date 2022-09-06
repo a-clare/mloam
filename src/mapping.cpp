@@ -186,11 +186,20 @@ void mloam::Mapping(const pcl::PointCloud<pcl::PointXYZI>& lastCloudCornerLast,
 									  const pcl::PointCloud<pcl::PointXYZI>& laserCloudFullResolution,
 			              const mloam::OdometryData& laserOdomToInit) {
 	
-	static const float lineRes = 0.4;
-	static const float planeRes = 0.8;
-	printf("line resolution %f plane resolution %f \n", lineRes, planeRes);
-	downSizeFilterCorner.setLeafSize(lineRes, lineRes,lineRes);
-	downSizeFilterSurf.setLeafSize(planeRes, planeRes, planeRes);
+	static bool do_once = true;
+	if (do_once) {
+		static const float lineRes = 0.4;
+		static const float planeRes = 0.8;
+		printf("line resolution %f plane resolution %f \n", lineRes, planeRes);
+		downSizeFilterCorner.setLeafSize(lineRes, lineRes,lineRes);
+		downSizeFilterSurf.setLeafSize(planeRes, planeRes, planeRes);
+		for (int i = 0; i < laserCloudNum; i++)
+		{
+			laserCloudCornerArray[i].reset(new pcl::PointCloud<pcl::PointXYZI>());
+			laserCloudSurfArray[i].reset(new pcl::PointCloud<pcl::PointXYZI>());
+		}
+		do_once = false;
+	}
 
 	laserCloudCornerLast = lastCloudCornerLast.makeShared();
 	laserCloudSurfLast = laserCloudSurfaceLast.makeShared();
@@ -198,7 +207,7 @@ void mloam::Mapping(const pcl::PointCloud<pcl::PointXYZI>& lastCloudCornerLast,
 
 	// Initially this was a callback/ros subscriber but moving it to here
 	laserOdometryHandler(laserOdomToInit);
-	while (1) {
+	// while (1) {
 		
 		q_wodom_curr.x() = laserOdomToInit.pose.pose.orientation.x();
 		q_wodom_curr.y() = laserOdomToInit.pose.pose.orientation.y();
@@ -756,6 +765,6 @@ void mloam::Mapping(const pcl::PointCloud<pcl::PointXYZI>& lastCloudCornerLast,
 		// br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp, "/camera_init", "/aft_mapped"));
 
 		frameCount++;
-	}
+	// }
 	return;
 }
