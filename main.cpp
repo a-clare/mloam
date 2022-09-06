@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
   Log::LoggingLevel() = logging::LogLevel::Error;
   int binary_file_number = 0;
   while(LoadLidarData(binary_file_number)) {
+    std::cout << "Working on binary file number " << binary_file_number << std::endl;
     mloam::ScanRegistration(point_cloud, 
                             corner_points_sharp, 
                             corner_points_less_sharp, 
