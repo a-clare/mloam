@@ -6,11 +6,13 @@ set(CMAKE_CXX_STANDARD 14)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common io filters)
 find_package(Ceres REQUIRED)
+find_package(GTest REQUIRED)
 
 include_directories(include
         ${PCL_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR}
-        ${CERES_INCLUDE_DIRS})
+        ${CERES_INCLUDE_DIRS}
+        ${GTEST_INCLUDE_DIR})
 
 add_library(mloam
         src/scan_registration.cpp
@@ -21,3 +23,13 @@ target_include_directories(mloam PUBLIC include)
 
 add_executable(my_loam main.cpp)
 target_link_libraries(my_loam mloam)
+
+add_executable(unit_tests 
+  tests/main.cpp)
+target_link_libraries(unit_tests GTest::GTest GTest::Main mloam)
+
+add_custom_command(
+        TARGET unit_tests
+        COMMENT "Run tests"
+        POST_BUILD
+        COMMAND unit_tests)
