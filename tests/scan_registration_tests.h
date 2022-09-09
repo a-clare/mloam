@@ -29,6 +29,20 @@ TEST(ScanRegistration, CorrectNumberOfFeatures) {
   EXPECT_EQ(corner_points_less_sharp.size(), 5118);
   EXPECT_EQ(surface_points_flat.size(), 1220);
   EXPECT_EQ(surface_points_less_flat.size(), 25135);
+
+  binary_file_num += 1;
+  point_cloud = mloam::LoadKittiData("/Users/adamclare/data/2011_09_30/2011_09_30_drive_0028_sync/velodyne_points/data/", binary_file_num);
+  mloam::ScanRegistration(point_cloud, 
+                          corner_points_sharp, 
+                          corner_points_less_sharp, 
+                          surface_points_flat,
+                          surface_points_less_flat,
+                          filtered_point_cloud);
+  EXPECT_EQ(filtered_point_cloud.size(), 84323);
+  EXPECT_EQ(corner_points_sharp.size(), 600);
+  EXPECT_EQ(corner_points_less_sharp.size(), 5162);
+  EXPECT_EQ(surface_points_flat.size(), 1222);
+  EXPECT_EQ(surface_points_less_flat.size(), 25483);
 }
 
 #endif
