@@ -63,6 +63,8 @@ struct OdometryData {
   TwistWithCovariance twist;
 };
 
+pcl::PointCloud<pcl::PointXYZI> LoadKittiData(const std::string &filePath,
+                                              int binaryFileNum);
 
 /**
  * @brief Extract features from the input point cloud

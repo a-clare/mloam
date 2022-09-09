@@ -43,7 +43,7 @@
 static const double HDL64_SCAN_PERIOD = 0.1;
 static const int HDL64_NUM_SCAN_RINGS = 64;
 static const int HDL64_NUM_LASERS_PER_BLOCK = 32;
-static const float HDL64_UPPER_BLOCK_MIN_ANGLE = -8.33f;
+static const float HDL64_UPPER_BLOCK_MIN_ANGLE = -8.83f;
 static const float HDL64_UPPER_BLOCK_MAX_ANGLE = 2.0f;
 static const float HDL64_MIN_ANGLE = -24.33;
 
@@ -204,7 +204,7 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
     }
 
     // Capping the scan rings to only include rings [0 to 50] to help remove outliers
-    if (scan_id > 50 || scan_id < 0) {
+    if (scan_id > 50 || scan_id < 0 || vertical_angle > HDL64_UPPER_BLOCK_MAX_ANGLE || vertical_angle < HDL64_MIN_ANGLE) {
       cloud_size--;
       continue;
     }
@@ -243,21 +243,21 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
   std::vector<int> scan_start_indices(HDL64_NUM_SCAN_RINGS, 0);
   std::vector<int> scan_end_indices(HDL64_NUM_SCAN_RINGS, 0);
 
-  // TODO: Why use a pcl pointer type here?
-  pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+  filteredCloud.clear();
+
   for (int i = 0; i < HDL64_NUM_SCAN_RINGS; i++) {
-    scan_start_indices[i] = laser_cloud->size() + 5;
-    *laser_cloud += scan_rings[i];
+    scan_start_indices[i] = filteredCloud.size() + 5;
+    filteredCloud += scan_rings[i];
     // TOOD: I think this will cause issues if the first N rings contain 0 points. Will
     //       be doing size() - 6, which is 0 - 7, and size() is an unsigned type and might
     //       cause overflow. Investigate
-    scan_end_indices[i] = laser_cloud->size() - 6;
+    scan_end_indices[i] = filteredCloud.size() - 6;
   }
 
   for (int i = 5; i < cloud_size - 5; i++) {
-    float diffX = laser_cloud->points[i - 5].x + laser_cloud->points[i - 4].x + laser_cloud->points[i - 3].x + laser_cloud->points[i - 2].x + laser_cloud->points[i - 1].x - 10 * laser_cloud->points[i].x + laser_cloud->points[i + 1].x + laser_cloud->points[i + 2].x + laser_cloud->points[i + 3].x + laser_cloud->points[i + 4].x + laser_cloud->points[i + 5].x;
-    float diffY = laser_cloud->points[i - 5].y + laser_cloud->points[i - 4].y + laser_cloud->points[i - 3].y + laser_cloud->points[i - 2].y + laser_cloud->points[i - 1].y - 10 * laser_cloud->points[i].y + laser_cloud->points[i + 1].y + laser_cloud->points[i + 2].y + laser_cloud->points[i + 3].y + laser_cloud->points[i + 4].y + laser_cloud->points[i + 5].y;
-    float diffZ = laser_cloud->points[i - 5].z + laser_cloud->points[i - 4].z + laser_cloud->points[i - 3].z + laser_cloud->points[i - 2].z + laser_cloud->points[i - 1].z - 10 * laser_cloud->points[i].z + laser_cloud->points[i + 1].z + laser_cloud->points[i + 2].z + laser_cloud->points[i + 3].z + laser_cloud->points[i + 4].z + laser_cloud->points[i + 5].z;
+    float diffX = filteredCloud.points[i - 5].x + filteredCloud.points[i - 4].x + filteredCloud.points[i - 3].x + filteredCloud.points[i - 2].x + filteredCloud.points[i - 1].x - 10 * filteredCloud.points[i].x + filteredCloud.points[i + 1].x + filteredCloud.points[i + 2].x + filteredCloud.points[i + 3].x + filteredCloud.points[i + 4].x + filteredCloud.points[i + 5].x;
+    float diffY = filteredCloud.points[i - 5].y + filteredCloud.points[i - 4].y + filteredCloud.points[i - 3].y + filteredCloud.points[i - 2].y + filteredCloud.points[i - 1].y - 10 * filteredCloud.points[i].y + filteredCloud.points[i + 1].y + filteredCloud.points[i + 2].y + filteredCloud.points[i + 3].y + filteredCloud.points[i + 4].y + filteredCloud.points[i + 5].y;
+    float diffZ = filteredCloud.points[i - 5].z + filteredCloud.points[i - 4].z + filteredCloud.points[i - 3].z + filteredCloud.points[i - 2].z + filteredCloud.points[i - 1].z - 10 * filteredCloud.points[i].z + filteredCloud.points[i + 1].z + filteredCloud.points[i + 2].z + filteredCloud.points[i + 3].z + filteredCloud.points[i + 4].z + filteredCloud.points[i + 5].z;
 
     cloud_curvatures[i] = diffX * diffX + diffY * diffY + diffZ * diffZ;
     cloud_sorted_indices[i] = i;
@@ -286,12 +286,12 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
           largest_picked_number++;
           if (largest_picked_number <= 2) {
             cloud_label[ind] = 2;
-            cornerPointsSharp.push_back(laser_cloud->points[ind]);
-            cornerPointsLessSharp.push_back(laser_cloud->points[ind]);
+            cornerPointsSharp.push_back(filteredCloud.points[ind]);
+            cornerPointsLessSharp.push_back(filteredCloud.points[ind]);
           }
           else if (largest_picked_number <= 20) {
             cloud_label[ind] = 1;
-            cornerPointsLessSharp.push_back(laser_cloud->points[ind]);
+            cornerPointsLessSharp.push_back(filteredCloud.points[ind]);
           }
           else {
             break;
@@ -300,9 +300,9 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
           cloud_neighbor_picked[ind] = 1;
 
           for (int l = 1; l <= 5; l++) {
-            float diffX = laser_cloud->points[ind + l].x - laser_cloud->points[ind + l - 1].x;
-            float diffY = laser_cloud->points[ind + l].y - laser_cloud->points[ind + l - 1].y;
-            float diffZ = laser_cloud->points[ind + l].z - laser_cloud->points[ind + l - 1].z;
+            float diffX = filteredCloud.points[ind + l].x - filteredCloud.points[ind + l - 1].x;
+            float diffY = filteredCloud.points[ind + l].y - filteredCloud.points[ind + l - 1].y;
+            float diffZ = filteredCloud.points[ind + l].z - filteredCloud.points[ind + l - 1].z;
             if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05) {
               break;
             }
@@ -310,9 +310,9 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
             cloud_neighbor_picked[ind + l] = 1;
           }
           for (int l = -1; l >= -5; l--) {
-            float diffX = laser_cloud->points[ind + l].x - laser_cloud->points[ind + l + 1].x;
-            float diffY = laser_cloud->points[ind + l].y - laser_cloud->points[ind + l + 1].y;
-            float diffZ = laser_cloud->points[ind + l].z - laser_cloud->points[ind + l + 1].z;
+            float diffX = filteredCloud.points[ind + l].x - filteredCloud.points[ind + l + 1].x;
+            float diffY = filteredCloud.points[ind + l].y - filteredCloud.points[ind + l + 1].y;
+            float diffZ = filteredCloud.points[ind + l].z - filteredCloud.points[ind + l + 1].z;
             if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05) {
               break;
             }
@@ -329,7 +329,7 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
         if (cloud_neighbor_picked[ind] == 0 && cloud_curvatures[ind] < 0.1) {
 
           cloud_label[ind] = -1;
-          surfacePointsFlat.push_back(laser_cloud->points[ind]);
+          surfacePointsFlat.push_back(filteredCloud.points[ind]);
 
           smallestPickedNum++;
           if (smallestPickedNum >= 4) {
@@ -338,9 +338,9 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
 
           cloud_neighbor_picked[ind] = 1;
           for (int l = 1; l <= 5; l++) {
-            float diffX = laser_cloud->points[ind + l].x - laser_cloud->points[ind + l - 1].x;
-            float diffY = laser_cloud->points[ind + l].y - laser_cloud->points[ind + l - 1].y;
-            float diffZ = laser_cloud->points[ind + l].z - laser_cloud->points[ind + l - 1].z;
+            float diffX = filteredCloud.points[ind + l].x - filteredCloud.points[ind + l - 1].x;
+            float diffY = filteredCloud.points[ind + l].y - filteredCloud.points[ind + l - 1].y;
+            float diffZ = filteredCloud.points[ind + l].z - filteredCloud.points[ind + l - 1].z;
             if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05) {
               break;
             }
@@ -348,9 +348,9 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
             cloud_neighbor_picked[ind + l] = 1;
           }
           for (int l = -1; l >= -5; l--) {
-            float diffX = laser_cloud->points[ind + l].x - laser_cloud->points[ind + l + 1].x;
-            float diffY = laser_cloud->points[ind + l].y - laser_cloud->points[ind + l + 1].y;
-            float diffZ = laser_cloud->points[ind + l].z - laser_cloud->points[ind + l + 1].z;
+            float diffX = filteredCloud.points[ind + l].x - filteredCloud.points[ind + l + 1].x;
+            float diffY = filteredCloud.points[ind + l].y - filteredCloud.points[ind + l + 1].y;
+            float diffZ = filteredCloud.points[ind + l].z - filteredCloud.points[ind + l + 1].z;
             if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05) {
               break;
             }
@@ -362,7 +362,7 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
 
       for (int k = sp; k <= ep; k++) {
         if (cloud_label[k] <= 0) {
-          surfacePointsLessFlat_scan->push_back(laser_cloud->points[k]);
+          surfacePointsLessFlat_scan->push_back(filteredCloud.points[k]);
         }
       }
     }

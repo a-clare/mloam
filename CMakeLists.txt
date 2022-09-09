@@ -15,6 +15,7 @@ include_directories(include
         ${GTEST_INCLUDE_DIR})
 
 add_library(mloam
+        src/mloam.cpp
         src/scan_registration.cpp
         src/odometry.cpp
         src/mapping.cpp)
