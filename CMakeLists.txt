@@ -25,12 +25,12 @@ target_include_directories(mloam PUBLIC include)
 add_executable(my_loam main.cpp)
 target_link_libraries(my_loam mloam)
 
-add_executable(unit_tests 
+add_executable(mloam_unit_tests 
   tests/main.cpp)
-target_link_libraries(unit_tests GTest::GTest GTest::Main mloam)
+target_link_libraries(mloam_unit_tests GTest::GTest GTest::Main mloam)
 
 add_custom_command(
-        TARGET unit_tests
+        TARGET mloam_unit_tests
         COMMENT "Run tests"
         POST_BUILD
-        COMMAND unit_tests)
+        COMMAND mloam_unit_tests)

@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
    
   // Setting log level to error so it supresses all the logging info in ScanRegistration, for now as I test odometry 
   Log::LoggingLevel() = logging::LogLevel::Error;
-  int binary_file_number = 0;
+  int binary_file_number = 1;
   while(LoadLidarData(binary_file_number)) {
     std::cout << "Working on binary file number " << binary_file_number << std::endl;
     mloam::ScanRegistration(point_cloud, 

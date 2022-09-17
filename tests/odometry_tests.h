@@ -25,11 +25,11 @@ TEST(OdometryTest, CorrectPose) {
                           filtered_point_cloud);
   
   mloam::OdometryData odom_data;
-  mloam::Odometry(filtered_point_cloud,
-                  corner_points_sharp, 
-                  corner_points_less_sharp, 
+  mloam::Odometry(corner_points_sharp,
+                  corner_points_less_sharp,
                   surface_points_flat,
                   surface_points_less_flat,
+                  filtered_point_cloud,
                   odom_data);
   
   EXPECT_DOUBLE_EQ(odom_data.pose.pose.position.x(), 0.0);
@@ -49,14 +49,22 @@ TEST(OdometryTest, CorrectPose) {
                           surface_points_less_flat,
                           filtered_point_cloud);
 
-  mloam::Odometry(filtered_point_cloud,
-                  corner_points_sharp, 
-                  corner_points_less_sharp, 
+  EXPECT_EQ(filtered_point_cloud.size(), 84323);
+  EXPECT_EQ(corner_points_sharp.size(), 600);
+  EXPECT_EQ(corner_points_less_sharp.size(), 5162);
+  EXPECT_EQ(surface_points_flat.size(), 1222);
+  EXPECT_EQ(surface_points_less_flat.size(), 25483);
+
+  mloam::Odometry(corner_points_sharp,
+                  corner_points_less_sharp,
                   surface_points_flat,
                   surface_points_less_flat,
+                  filtered_point_cloud,
                   odom_data);
   
-  // EXPECT_DOUBLE_EQ(odom_data.pose.pose.position.y(), 0.354233);
+  EXPECT_NEAR(odom_data.pose.pose.position.x(), 0.354233, 1.0e-6);
+  EXPECT_NEAR(odom_data.pose.pose.position.y(), 0.0122033, 1.0e-6);
+  EXPECT_NEAR(odom_data.pose.pose.position.z(), 0.004543, 1.0e-6);
 }
 
 #endif
