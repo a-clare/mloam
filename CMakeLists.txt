@@ -7,6 +7,7 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common io filters)
 find_package(Ceres REQUIRED)
 find_package(GTest REQUIRED)
+find_package(benchmark REQUIRED)
 
 include_directories(include
         ${PCL_INCLUDE_DIRS}
@@ -34,3 +35,7 @@ add_custom_command(
         COMMENT "Run tests"
         POST_BUILD
         COMMAND mloam_unit_tests)
+
+add_executable(mloam_benchmarks 
+  benchmarks/scan_registration_benchmarks.cpp)
+target_link_libraries(mloam_benchmarks mloam benchmark::benchmark benchmark::benchmark_main)  

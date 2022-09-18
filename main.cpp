@@ -59,7 +59,6 @@ int main(int argc, char **argv) {
   Log::LoggingLevel() = logging::LogLevel::Error;
   int binary_file_number = 1;
   while(LoadLidarData(binary_file_number)) {
-    std::cout << "Working on binary file number " << binary_file_number << std::endl;
     mloam::ScanRegistration(point_cloud, 
                             corner_points_sharp, 
                             corner_points_less_sharp, 
@@ -75,6 +74,9 @@ int main(int argc, char **argv) {
                     filtered_point_cloud,
                     odometry_data);
 
+    std::cout << "1," << odometry_data.pose.pose.position.x() << "," 
+                   << odometry_data.pose.pose.position.y() << "," 
+                   << odometry_data.pose.pose.position.z() << std::endl;
     mloam::Mapping(corner_points_less_sharp,
                    surface_points_less_flat,
                    filtered_point_cloud,

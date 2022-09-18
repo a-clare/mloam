@@ -180,7 +180,7 @@ void laserOdometryHandler(const mloam::OdometryData &laserOdometry) {
 	odomAftMapped.pose.pose.position.y() = t_w_curr.y();
 	odomAftMapped.pose.pose.position.z() = t_w_curr.z();
 
-	std::cout << "AFT: " << odomAftMapped.pose.pose.position.x() << ","
+	std::cout << "2," << odomAftMapped.pose.pose.position.x() << ","
 		<< odomAftMapped.pose.pose.position.y() << ","
 		<< odomAftMapped.pose.pose.position.z() << std::endl;
 }
