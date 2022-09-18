@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project(mloam)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common io filters)
