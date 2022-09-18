@@ -121,7 +121,7 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
     3) Find point features in each scan ring by looking at the curvature of each point
   */
 
-  filteredCloud = inputCloud;
+  // filteredCloud = inputCloud;
   LOG_INFO << "Number of points in input point cloud size: " << inputCloud.size(); 
 
   if (!is_system_initialized) {
@@ -146,10 +146,10 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
   surfacePointsLessFlat.clear();
 
   LOG_DEBUG << "Filtering points by distance";
-  RemovePointsLessThanDistance(filteredCloud, MINIMUM_DISTANCE_THRESHOLD);
+  // RemovePointsLessThanDistance(filteredCloud, MINIMUM_DISTANCE_THRESHOLD);
   LOG_INFO << "Number of points after distance filtering: " << filteredCloud.size();
 
-  int cloud_size = filteredCloud.points.size();
+  int cloud_size = inputCloud.points.size(); // filteredCloud.points.size();
   /* We assume the lidar is spinning. If we look at a single scan line, the 2nd point in the scan occurs
    * N seconds after the first point. We can estimate determine N by calculating the horizontal angle
    * (orientation) of the point and using the lidar spin rate.
@@ -158,9 +158,9 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
    * TODO: This is only required if we need to undistort the point cloud, if its already
    *       corrected we dont need to do this.
    * TODO: Does this assume the lidar is reasonably level? What happens if the lidar is not level? */
-  float start_orientation = -atan2(filteredCloud.points[0].y, filteredCloud.points[0].x);
-  float end_orientation = -atan2(filteredCloud.points[cloud_size - 1].y,
-                                 filteredCloud.points[cloud_size - 1].x) +
+  float start_orientation = -atan2(inputCloud.points[0].y, inputCloud.points[0].x);
+  float end_orientation = -atan2(inputCloud.points[cloud_size - 1].y,
+                                 inputCloud.points[cloud_size - 1].x) +
                                  2 * M_PI;
 
   // TODO: Understand what this is doing. I think its capping upper and lower angle values but need to confirm
@@ -172,7 +172,15 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
   }
 
   bool passed_halfway = false;
-  for (auto &point : filteredCloud) {
+  static const double DIST_THRESHOLD_SQUARED = MINIMUM_DISTANCE_THRESHOLD * MINIMUM_DISTANCE_THRESHOLD;
+  for (auto &point : inputCloud) {
+    double point_distance = point.x * point.x + 
+                            point.y * point.y + 
+                            point.z * point.z;
+    if (point_distance < DIST_THRESHOLD_SQUARED) {
+      cloud_size--;
+      continue;
+    }
     /* Note: At this point some loam implementations will take the point and 
              rotate it, to change its coordinate system.
              I think its only a matter of preference so im not rotating here 
@@ -234,8 +242,9 @@ bool mloam::ScanRegistration(const pcl::PointCloud<pcl::PointXYZI> &inputCloud,
 
     // TODO: This is quite hacky, using the intensity field to hold the point scan time information
     float relative_time = (orientation - start_orientation) / (end_orientation - start_orientation);
-    point.intensity = scan_id + HDL64_SCAN_PERIOD * relative_time;
-    scan_rings[scan_id].push_back(point);
+    auto new_pt = point;
+    new_pt.intensity = scan_id + HDL64_SCAN_PERIOD * relative_time;
+    scan_rings[scan_id].push_back(new_pt);
   }
 
   LOG_INFO << "Number of points after filtering points by vertical angle: " << cloud_size;
