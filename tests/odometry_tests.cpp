@@ -17,7 +17,8 @@ TEST(OdometryTest, CorrectPose) {
   pcl::PointCloud<pcl::PointXYZI> filtered_point_cloud;
   int binary_file_num = 1;
   point_cloud = mloam::LoadKittiData("/Users/adamclare/data/2011_09_30/2011_09_30_drive_0028_sync/velodyne_points/data/", binary_file_num);
-  mloam::ScanRegistration(point_cloud, 
+
+  mloam::ScanRegistration(point_cloud,
                           corner_points_sharp, 
                           corner_points_less_sharp, 
                           surface_points_flat,

@@ -21,14 +21,16 @@ add_library(mloam
         src/scan_registration.cpp
         src/odometry.cpp
         src/mapping.cpp)
-target_link_libraries(mloam ${PCL_LIBRARIES} ${CERES_LIBRARIES})
+target_link_libraries(mloam pcl_common pcl_io pcl_filters ${CERES_LIBRARIES})
 target_include_directories(mloam PUBLIC include)
 
 add_executable(my_loam main.cpp)
 target_link_libraries(my_loam mloam)
 
 add_executable(mloam_unit_tests 
-  tests/main.cpp)
+        tests/main.cpp
+        tests/odometry_tests.cpp
+        tests/scan_registration_tests.cpp)
 target_link_libraries(mloam_unit_tests GTest::GTest GTest::Main mloam)
 
 add_custom_command(
@@ -36,7 +38,3 @@ add_custom_command(
         COMMENT "Run tests"
         POST_BUILD
         COMMAND mloam_unit_tests)
-
-add_executable(mloam_benchmarks 
-  benchmarks/scan_registration_benchmarks.cpp)
-target_link_libraries(mloam_benchmarks mloam benchmark::benchmark benchmark::benchmark_main)  

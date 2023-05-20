@@ -38,6 +38,7 @@
 #include <string>
 #include "mloam/mloam.h"
 #include <pcl/filters/voxel_grid.h>
+#include <iostream>
 
 // Velodyne HDL64 specific parameters 
 static const double HDL64_SCAN_PERIOD = 0.1;
